@@ -1,1 +1,615 @@
 # auung22-maker.github.io
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
+<title>합주실 예약</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14131a;
+    --surface: #1d1b25;
+    --surface-alt: #262330;
+    --border: #35313f;
+    --border-soft: #2a2733;
+    --accent: #e8a33d;
+    --accent-dim: #7a5a26;
+    --accent2: #4fa8a0;
+    --text: #f3efe9;
+    --text-muted: #94909c;
+    --text-faint: #605c68;
+    --danger: #e0645f;
+    --sun: #e0645f;
+    --sat: #5a9bd8;
+    --radius: 14px;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before{
+    content:'';
+    position: fixed; inset:0;
+    background-image:
+      radial-gradient(circle at 15% 8%, rgba(232,163,61,0.07), transparent 40%),
+      radial-gradient(circle at 85% 92%, rgba(79,168,160,0.06), transparent 45%);
+    pointer-events:none;
+    z-index:0;
+  }
+  #app{ position:relative; z-index:1; max-width: 560px; margin: 0 auto; min-height:100vh; display:flex; flex-direction:column; }
+
+  /* ---------- Header ---------- */
+  .header{
+    padding: 22px 20px 16px;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .header-title{ display:flex; align-items:center; gap:9px; }
+  .header-title h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size: 21px; font-weight:700; letter-spacing:-0.02em; margin:0;
+  }
+  .rec-dot{
+    width:7px; height:7px; border-radius:50%; background: var(--accent);
+    box-shadow: 0 0 0 3px rgba(232,163,61,0.15);
+    animation: pulse 2.4s ease-in-out infinite;
+    flex-shrink:0;
+  }
+  @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.35; } }
+  .header-sub{ font-size:11.5px; color: var(--text-muted); margin-top:3px; font-family:'JetBrains Mono',monospace; letter-spacing:0.02em; }
+  .header-badge{
+    font-family:'JetBrains Mono', monospace; font-size:10.5px; color: var(--text-faint);
+    border:1px solid var(--border); padding:5px 9px; border-radius:8px; letter-spacing:0.03em;
+  }
+
+  /* ---------- Tabs ---------- */
+  .tabbar{
+    display:flex; gap:6px; padding: 12px 16px; position: sticky; top:0; z-index:20;
+    background: rgba(20,19,26,0.9); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .tab{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+    padding:9px 6px; border-radius:10px; border:1px solid transparent;
+    background:transparent; color: var(--text-muted); font-size:13px; font-weight:600;
+    font-family:'Inter',sans-serif; cursor:pointer; transition: all .15s ease;
+  }
+  .tab svg{ width:15px; height:15px; opacity:0.75; }
+  .tab.active{ background: var(--surface-alt); color: var(--text); border-color: var(--border); }
+  .tab.active svg{ opacity:1; }
+  .tab.active.accent-tab{ color: var(--accent); }
+  .tab.active.accent-tab svg{ stroke: var(--accent); }
+
+  .content{ flex:1; padding: 16px 16px 100px; }
+
+  /* ---------- Calendar ---------- */
+  .cal-nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .cal-month{ font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; letter-spacing:-0.01em; }
+  .cal-nav-btn{
+    width:32px; height:32px; border-radius:9px; border:1px solid var(--border);
+    background: var(--surface); color: var(--text); display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .cal-nav-btn:active{ background: var(--surface-alt); }
+  .cal-nav-today{
+    font-family:'JetBrains Mono',monospace; font-size:11px; color: var(--accent2);
+    border:1px solid rgba(79,168,160,0.35); background: rgba(79,168,160,0.08);
+    padding:5px 10px; border-radius:8px; cursor:pointer;
+  }
+  .weekday-row{ display:grid; grid-template-columns: repeat(7,1fr); margin-bottom:6px; }
+  .weekday-row span{ text-align:center; font-size:10.5px; color: var(--text-faint); font-family:'JetBrains Mono',monospace; }
+  .weekday-row span:first-child{ color: var(--sun); }
+  .weekday-row span:last-child{ color: var(--sat); }
+  .cal-grid{ display:grid; grid-template-columns: repeat(7,1fr); gap:5px; }
+  .cal-cell{
+    aspect-ratio: 1/1.02; border-radius:10px; background: var(--surface);
+    border:1px solid var(--border-soft); display:flex; flex-direction:column;
+    align-items:center; justify-content:flex-start; padding-top:7px; cursor:pointer;
+    position:relative; overflow:hidden; transition: border-color .15s ease;
+  }
+  .cal-cell.empty{ background:transparent; border-color:transparent; cursor:default; }
+  .cal-cell .daynum{ font-size:13px; font-weight:600; font-family:'JetBrains Mono',monospace; color: var(--text-muted); z-index:2; }
+  .cal-cell.is-sun .daynum{ color: var(--sun); }
+  .cal-cell.is-sat .daynum{ color: var(--sat); }
+  .cal-cell.is-today{ border-color: var(--accent); }
+  .cal-cell.is-today .daynum{ color: var(--accent); }
+  .cal-cell.selected{ background: var(--surface-alt); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .vu-bar{
+    position:absolute; bottom:0; left:0; right:0;
+    background: linear-gradient(to top, var(--accent), rgba(232,163,61,0.35));
+    opacity:0.85; z-index:1;
+  }
+  .cal-cell .cnt{ font-size:9px; color: var(--accent); font-family:'JetBrains Mono',monospace; z-index:2; margin-top:2px; font-weight:600; }
+
+  .day-panel{ margin-top:20px; }
+  .day-panel-title{
+    font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color: var(--text);
+    margin-bottom:10px; display:flex; align-items:center; gap:8px;
+  }
+  .day-panel-title .count-pill{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; color: var(--accent);
+    background: rgba(232,163,61,0.12); border:1px solid rgba(232,163,61,0.3);
+    padding:2px 8px; border-radius:20px;
+  }
+  .resv-chip{
+    display:flex; align-items:center; gap:11px; padding:12px 13px; border-radius:11px;
+    background: var(--surface); border:1px solid var(--border-soft); margin-bottom:8px; cursor:pointer;
+    transition: border-color .15s ease, transform .1s ease;
+  }
+  .resv-chip:active{ transform: scale(0.985); }
+  .resv-chip:hover{ border-color: var(--accent-dim); }
+  .resv-time{
+    font-family:'JetBrains Mono',monospace; font-size:12px; color: var(--accent); font-weight:600;
+    white-space:nowrap; min-width:92px;
+  }
+  .resv-name{ font-size:13.5px; font-weight:600; color: var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .empty-note{ font-size:12.5px; color: var(--text-faint); padding:14px 4px; font-family:'Inter',sans-serif; }
+
+  /* ---------- Week view ---------- */
+  .week-nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .week-range{ font-family:'Space Grotesk',sans-serif; font-size:14.5px; font-weight:700; }
+  .week-scroll{ overflow-x:auto; overflow-y:hidden; border-radius:var(--radius); border:1px solid var(--border-soft); }
+  .week-table{ display:grid; grid-template-columns: 46px repeat(7, 78px); min-width: 592px; }
+  .week-corner{ background: var(--surface); border-bottom:1px solid var(--border-soft); border-right:1px solid var(--border-soft); position:sticky; left:0; z-index:3; }
+  .week-daycol-header{
+    background: var(--surface); border-bottom:1px solid var(--border-soft); border-right:1px solid var(--border-soft);
+    text-align:center; padding:8px 2px; position:sticky; top:0; z-index:2;
+  }
+  .week-daycol-header .wd{ font-size:10px; color: var(--text-faint); font-family:'JetBrains Mono',monospace; }
+  .week-daycol-header .dn{ font-size:14px; font-weight:700; font-family:'Space Grotesk',sans-serif; margin-top:1px; }
+  .week-daycol-header.is-sun .wd, .week-daycol-header.is-sun .dn{ color: var(--sun); }
+  .week-daycol-header.is-sat .wd, .week-daycol-header.is-sat .dn{ color: var(--sat); }
+  .week-daycol-header.is-today{ background: rgba(232,163,61,0.1); }
+  .hour-label{
+    font-family:'JetBrains Mono',monospace; font-size:9.5px; color: var(--text-faint);
+    text-align:right; padding-right:6px; padding-top:2px; border-right:1px solid var(--border-soft);
+    border-bottom:1px solid var(--border-soft); background: var(--surface); position:sticky; left:0;
+  }
+  .hour-cell{
+    border-right:1px solid var(--border-soft); border-bottom:1px solid var(--border-soft);
+    height:30px; background: var(--surface); position:relative;
+  }
+  .hour-cell.now-row{ background: rgba(232,163,61,0.04); }
+  .resv-block{
+    position:absolute; left:2px; right:2px; border-radius:6px;
+    background: repeating-linear-gradient(115deg, var(--accent-dim), var(--accent-dim) 4px, #8a672c 4px, #8a672c 8px);
+    border:1px solid var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    padding:3px 5px; overflow:hidden; cursor:pointer; z-index:2;
+  }
+  .resv-block .rb-name{ font-size:10px; font-weight:700; color:#1a1408; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .resv-block .rb-time{ font-size:8.5px; color:#3a2c0f; font-family:'JetBrains Mono',monospace; }
+
+  /* ---------- Form ---------- */
+  .form-title{ font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:700; margin-bottom:4px; }
+  .form-sub{ font-size:12.5px; color: var(--text-muted); margin-bottom:22px; }
+  .field{ margin-bottom:16px; }
+  .field label{
+    display:block; font-size:11.5px; color: var(--text-muted); margin-bottom:7px;
+    font-family:'JetBrains Mono',monospace; letter-spacing:0.03em; text-transform:uppercase;
+  }
+  .field input{
+    width:100%; background: var(--surface); border:1px solid var(--border); color: var(--text);
+    padding:13px 14px; border-radius:10px; font-size:15px; font-family:'Inter',sans-serif;
+    outline:none; transition: border-color .15s ease;
+  }
+  .field input:focus{ border-color: var(--accent); }
+  .field input::-webkit-calendar-picker-indicator{ filter: invert(0.7); }
+  .time-row{ display:flex; align-items:center; gap:10px; }
+  .time-row .field{ flex:1; margin-bottom:0; }
+  .time-sep{ color: var(--text-faint); font-family:'JetBrains Mono',monospace; padding-top:20px; }
+  .submit-btn{
+    width:100%; padding:15px; border-radius:11px; border:none; margin-top:6px;
+    background: var(--accent); color:#1a1408; font-size:14.5px; font-weight:700;
+    font-family:'Space Grotesk',sans-serif; cursor:pointer; letter-spacing:0.01em;
+  }
+  .submit-btn:active{ transform: scale(0.99); }
+  .form-msg{
+    margin-top:14px; padding:12px 13px; border-radius:10px; font-size:13px; line-height:1.5;
+    display:none;
+  }
+  .form-msg.show{ display:block; }
+  .form-msg.error{ background: rgba(224,100,95,0.1); border:1px solid rgba(224,100,95,0.35); color:#f0a7a4; }
+  .form-msg.success{ background: rgba(79,168,160,0.1); border:1px solid rgba(79,168,160,0.35); color: var(--accent2); }
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop{
+    position:fixed; inset:0; background: rgba(10,9,13,0.6); backdrop-filter: blur(2px);
+    z-index:50; display:flex; align-items:flex-end; justify-content:center;
+    opacity:0; pointer-events:none; transition: opacity .2s ease;
+  }
+  .modal-backdrop.open{ opacity:1; pointer-events:auto; }
+  .modal-sheet{
+    width:100%; max-width:560px; background: var(--surface-alt); border-radius:20px 20px 0 0;
+    border:1px solid var(--border); border-bottom:none; padding:10px 22px 28px;
+    transform: translateY(100%); transition: transform .25s cubic-bezier(.32,.72,0,1);
+  }
+  .modal-backdrop.open .modal-sheet{ transform: translateY(0); }
+  .modal-handle{ width:36px; height:4px; background: var(--border); border-radius:3px; margin: 10px auto 18px; }
+  .modal-label{ font-family:'JetBrains Mono',monospace; font-size:10.5px; color: var(--accent); letter-spacing:0.04em; margin-bottom:16px; }
+  .modal-row{ display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border-soft); }
+  .modal-row:last-of-type{ border-bottom:none; }
+  .modal-row .k{ font-size:12px; color: var(--text-muted); }
+  .modal-row .v{ font-size:14.5px; font-weight:600; color: var(--text); font-family:'Space Grotesk',sans-serif; }
+  .modal-row .v.mono{ font-family:'JetBrains Mono',monospace; }
+  .modal-actions{ display:flex; gap:10px; margin-top:20px; }
+  .modal-btn{
+    flex:1; padding:13px; border-radius:10px; font-size:13.5px; font-weight:600; cursor:pointer;
+    font-family:'Inter',sans-serif; border:1px solid var(--border); background: var(--surface); color: var(--text);
+  }
+  .modal-btn.danger{ background: rgba(224,100,95,0.1); border-color: rgba(224,100,95,0.4); color:#f0a7a4; }
+
+  ::-webkit-scrollbar{ height:6px; width:6px; }
+  ::-webkit-scrollbar-thumb{ background: var(--border); border-radius:3px; }
+
+  .loading-note{ text-align:center; color: var(--text-faint); font-size:12.5px; padding:40px 0; font-family:'JetBrains Mono',monospace; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- State ----------
+  let reservations = {};      // id -> {id,name,date,start,end}
+  let currentView = 'calendar'; // 'calendar' | 'week' | 'form'
+  let loaded = false;
+  let today = new Date();
+  today.setHours(0,0,0,0);
+
+  let calCursor = new Date(today);          // month being viewed
+  let selectedDate = fmtKey(today);         // selected day in calendar
+  let weekCursor = new Date(today);         // any date inside viewed week
+  let modalResv = null;
+
+  // ---------- Helpers ----------
+  function pad2(n){ return n < 10 ? '0'+n : ''+n; }
+  function fmtKey(d){ return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+  function keyToDate(k){ const [y,m,d] = k.split('-').map(Number); return new Date(y, m-1, d); }
+  function addDays(d, n){ const nd = new Date(d); nd.setDate(nd.getDate()+n); return nd; }
+  const WD_KO = ['일','월','화','수','목','금','토'];
+  function fmtMonthLabel(d){ return d.getFullYear()+'년 '+(d.getMonth()+1)+'월'; }
+  function fmtDayLabel(d){ return (d.getMonth()+1)+'월 '+d.getDate()+'일 ('+WD_KO[d.getDay()]+')'; }
+  function timeToMin(t){ const [h,m] = t.split(':').map(Number); return h*60+m; }
+  function overlaps(aS,aE,bS,bE){ return timeToMin(aS) < timeToMin(bE) && timeToMin(aE) > timeToMin(bS); }
+  function uid(){ return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+  function resvListForDate(dateKey){
+    return Object.values(reservations)
+      .filter(r => r.date === dateKey)
+      .sort((a,b) => timeToMin(a.start) - timeToMin(b.start));
+  }
+
+  // ---------- Storage ----------
+  async function loadReservations(){
+    try{
+      const res = await window.storage.get('reservations', true);
+      if(res && res.value){ reservations = JSON.parse(res.value); }
+    }catch(e){
+      reservations = {};
+    }
+    loaded = true;
+    render();
+  }
+
+  async function saveReservations(){
+    try{
+      await window.storage.set('reservations', JSON.stringify(reservations), true);
+    }catch(e){
+      console.error('저장 실패', e);
+    }
+  }
+
+  // ---------- Icons ----------
+  const ICON_CAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+  const ICON_WEEK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18M9 10v11M15 10v11"/></svg>';
+  const ICON_PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+  const ICON_CHEV_L = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
+  const ICON_CHEV_R = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
+
+  // ---------- Render root ----------
+  function render(){
+    const app = document.getElementById('app');
+    app.innerHTML = `
+      <div class="header">
+        <div>
+          <div class="header-title"><div class="rec-dot"></div><h1>합주실 예약</h1></div>
+          <div class="header-sub">SHARED BOOKING BOARD</div>
+        </div>
+        <div class="header-badge">${Object.keys(reservations).length}건 등록됨</div>
+      </div>
+      <div class="tabbar">
+        <button class="tab ${currentView==='calendar'?'active':''}" data-tab="calendar">${ICON_CAL}달력</button>
+        <button class="tab ${currentView==='week'?'active':''}" data-tab="week">${ICON_WEEK}주간</button>
+        <button class="tab ${currentView==='form'?'active accent-tab':'accent-tab'}" data-tab="form">${ICON_PLUS}예약하기</button>
+      </div>
+      <div class="content" id="content"></div>
+      ${modalResv ? renderModal(modalResv) : ''}
+    `;
+    const content = document.getElementById('content');
+    if(!loaded){
+      content.innerHTML = '<div class="loading-note">불러오는 중…</div>';
+    } else if(currentView === 'calendar'){
+      content.innerHTML = renderCalendarView();
+    } else if(currentView === 'week'){
+      content.innerHTML = renderWeekView();
+    } else {
+      content.innerHTML = renderFormView();
+    }
+    bindEvents();
+  }
+
+  // ---------- Calendar view ----------
+  function renderCalendarView(){
+    const y = calCursor.getFullYear(), m = calCursor.getMonth();
+    const firstDay = new Date(y, m, 1);
+    const startOffset = firstDay.getDay();
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+
+    let maxCount = 1;
+    const counts = {};
+    for(let d=1; d<=daysInMonth; d++){
+      const key = y+'-'+pad2(m+1)+'-'+pad2(d);
+      const c = resvListForDate(key).length;
+      counts[key] = c;
+      if(c > maxCount) maxCount = c;
+    }
+
+    let cells = '';
+    for(let i=0;i<startOffset;i++){ cells += '<div class="cal-cell empty"></div>'; }
+    for(let d=1; d<=daysInMonth; d++){
+      const dateObj = new Date(y,m,d);
+      const key = fmtKey(dateObj);
+      const wd = dateObj.getDay();
+      const c = counts[key];
+      const isToday = key === fmtKey(today);
+      const isSel = key === selectedDate;
+      const barH = c ? Math.max(14, Math.round((c/maxCount)*100)) : 0;
+      cells += `<div class="cal-cell ${wd===0?'is-sun':''} ${wd===6?'is-sat':''} ${isToday?'is-today':''} ${isSel?'selected':''}" data-date="${key}">
+        ${c ? `<div class="vu-bar" style="height:${barH}%"></div>` : ''}
+        <span class="daynum">${d}</span>
+        ${c ? `<span class="cnt">${c}건</span>` : ''}
+      </div>`;
+    }
+
+    const list = resvListForDate(selectedDate);
+    const selDateObj = keyToDate(selectedDate);
+
+    return `
+      <div class="cal-nav">
+        <button class="cal-nav-btn" data-cal-nav="-1">${ICON_CHEV_L}</button>
+        <div class="cal-month">${fmtMonthLabel(calCursor)}</div>
+        <button class="cal-nav-btn" data-cal-nav="1">${ICON_CHEV_R}</button>
+      </div>
+      <div class="weekday-row"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+      <div class="cal-grid">${cells}</div>
+      <div class="day-panel">
+        <div class="day-panel-title">${fmtDayLabel(selDateObj)} <span class="count-pill">${list.length}건</span></div>
+        ${list.length === 0
+          ? `<div class="empty-note">이 날짜엔 예약이 없어요.</div>`
+          : list.map(r => `
+            <div class="resv-chip" data-open="${r.id}">
+              <span class="resv-time">${r.start}–${r.end}</span>
+              <span class="resv-name">${escapeHtml(r.name)}</span>
+            </div>`).join('')}
+      </div>
+    `;
+  }
+
+  // ---------- Week view ----------
+  function renderWeekView(){
+    const wd = weekCursor.getDay();
+    const weekStart = addDays(weekCursor, -wd);
+    const days = Array.from({length:7}, (_,i) => addDays(weekStart, i));
+
+    let header = '<div class="week-corner"></div>';
+    days.forEach(d => {
+      const key = fmtKey(d);
+      const isToday = key === fmtKey(today);
+      header += `<div class="week-daycol-header ${d.getDay()===0?'is-sun':''} ${d.getDay()===6?'is-sat':''} ${isToday?'is-today':''}">
+        <div class="wd">${WD_KO[d.getDay()]}</div><div class="dn">${d.getDate()}</div>
+      </div>`;
+    });
+
+    let hourRows = '';
+    for(let h=0; h<24; h++){
+      hourRows += `<div class="hour-label">${pad2(h)}:00</div>`;
+      days.forEach(d => {
+        hourRows += `<div class="hour-cell" data-hourcell="${fmtKey(d)}|${h}"></div>`;
+      });
+    }
+
+    // build blocks positioned absolutely, appended after grid via JS-computed top offset using inline style with grid line math
+    // We instead compute blocks separately and place them with position relative to column using an overlay approach.
+    let blocksHtml = '';
+    days.forEach((d, colIdx) => {
+      const key = fmtKey(d);
+      resvListForDate(key).forEach(r => {
+        const startMin = timeToMin(r.start);
+        const endMin = Math.max(timeToMin(r.end), startMin + 15);
+        const top = (startMin/60)*30; // 30px per hour row
+        const height = ((endMin-startMin)/60)*30;
+        const left = 46 + colIdx*78;
+        blocksHtml += `<div class="resv-block" data-open="${r.id}" style="top:${top}px; left:${left+2}px; width:74px; height:${height-2}px;">
+          <div class="rb-name">${escapeHtml(r.name)}</div>
+          <div class="rb-time">${r.start}–${r.end}</div>
+        </div>`;
+      });
+    });
+
+    return `
+      <div class="week-nav">
+        <button class="cal-nav-btn" data-week-nav="-1">${ICON_CHEV_L}</button>
+        <div class="week-range">${fmtMonthLabel(weekStart)} ${weekStart.getDate()}일 – ${addDays(weekStart,6).getDate()}일</div>
+        <button class="cal-nav-btn" data-week-nav="1">${ICON_CHEV_R}</button>
+      </div>
+      <div class="week-scroll">
+        <div style="position:relative;">
+          <div class="week-table">${header}${hourRows}</div>
+          <div style="position:absolute; top:0; left:0; pointer-events:none;">
+            <div style="position:relative; pointer-events:auto;">${blocksHtml}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ---------- Form view ----------
+  function renderFormView(){
+    return `
+      <div class="form-title">새 예약 등록</div>
+      <div class="form-sub">같은 시간에 이미 예약이 있으면 자동으로 막아드려요.</div>
+      <form id="resv-form">
+        <div class="field">
+          <label>예약자 이름</label>
+          <input type="text" id="f-name" placeholder="이름을 입력하세요" required maxlength="20" />
+        </div>
+        <div class="field">
+          <label>날짜</label>
+          <input type="date" id="f-date" value="${selectedDate}" required />
+        </div>
+        <div class="time-row">
+          <div class="field">
+            <label>시작 시간</label>
+            <input type="time" id="f-start" value="18:00" required />
+          </div>
+          <div class="time-sep">–</div>
+          <div class="field">
+            <label>종료 시간</label>
+            <input type="time" id="f-end" value="20:00" required />
+          </div>
+        </div>
+        <button type="submit" class="submit-btn">예약 확정하기</button>
+        <div class="form-msg" id="form-msg"></div>
+      </form>
+    `;
+  }
+
+  // ---------- Modal ----------
+  function renderModal(r){
+    return `
+      <div class="modal-backdrop open" id="modal-backdrop">
+        <div class="modal-sheet">
+          <div class="modal-handle"></div>
+          <div class="modal-label">예약 정보</div>
+          <div class="modal-row"><span class="k">예약자</span><span class="v">${escapeHtml(r.name)}</span></div>
+          <div class="modal-row"><span class="k">날짜</span><span class="v mono">${fmtDayLabel(keyToDate(r.date))}</span></div>
+          <div class="modal-row"><span class="k">시간</span><span class="v mono">${r.start} ~ ${r.end}</span></div>
+          <div class="modal-actions">
+            <button class="modal-btn" id="modal-close">닫기</button>
+            <button class="modal-btn danger" id="modal-delete">예약 취소</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- Events ----------
+  function bindEvents(){
+    document.querySelectorAll('[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => { currentView = btn.dataset.tab; render(); });
+    });
+
+    document.querySelectorAll('[data-cal-nav]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        calCursor.setMonth(calCursor.getMonth() + parseInt(btn.dataset.calNav,10));
+        calCursor = new Date(calCursor);
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-week-nav]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        weekCursor = addDays(weekCursor, 7*parseInt(btn.dataset.weekNav,10));
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-date]').forEach(cell => {
+      cell.addEventListener('click', () => { selectedDate = cell.dataset.date; render(); });
+    });
+
+    document.querySelectorAll('[data-open]').forEach(el => {
+      el.addEventListener('click', () => {
+        modalResv = reservations[el.dataset.open];
+        render();
+      });
+    });
+
+    const backdrop = document.getElementById('modal-backdrop');
+    if(backdrop){
+      backdrop.addEventListener('click', (e) => { if(e.target === backdrop){ modalResv = null; render(); } });
+    }
+    const closeBtn = document.getElementById('modal-close');
+    if(closeBtn){ closeBtn.addEventListener('click', () => { modalResv = null; render(); }); }
+    const delBtn = document.getElementById('modal-delete');
+    if(delBtn){
+      delBtn.addEventListener('click', async () => {
+        delete reservations[modalResv.id];
+        modalResv = null;
+        render();
+        await saveReservations();
+      });
+    }
+
+    const form = document.getElementById('resv-form');
+    if(form){
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('f-name').value.trim();
+        const date = document.getElementById('f-date').value;
+        const start = document.getElementById('f-start').value;
+        const end = document.getElementById('f-end').value;
+        const msg = document.getElementById('form-msg');
+
+        if(!name || !date || !start || !end){
+          showMsg(msg, 'error', '모든 항목을 입력해주세요.');
+          return;
+        }
+        if(timeToMin(start) >= timeToMin(end)){
+          showMsg(msg, 'error', '종료 시간은 시작 시간보다 늦어야 해요.');
+          return;
+        }
+
+        // Interlock: check overlap
+        const conflict = resvListForDate(date).find(r => overlaps(start, end, r.start, r.end));
+        if(conflict){
+          showMsg(msg, 'error', `이미 예약이 있어요 — ${escapeHtml(conflict.name)}님 (${conflict.start}~${conflict.end}). 다른 시간을 선택해주세요.`);
+          return;
+        }
+
+        const id = uid();
+        reservations[id] = { id, name, date, start, end };
+        selectedDate = date;
+        showMsg(msg, 'success', '예약이 등록됐어요!');
+        await saveReservations();
+        setTimeout(() => { currentView = 'calendar'; render(); }, 650);
+      });
+    }
+  }
+
+  function showMsg(el, type, text){
+    el.className = 'form-msg show ' + type;
+    el.textContent = text;
+  }
+
+  // ---------- Init ----------
+  render();
+  loadReservations();
+})();
+</script>
+</body>
+</html>
