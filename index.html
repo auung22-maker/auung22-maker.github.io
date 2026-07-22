@@ -254,7 +254,36 @@
 <body>
 <div id="app"></div>
 
-<script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAOOxY3fKQhRzZH32Ok_qeDOGX8YWN3jv8",
+    authDomain: "reservation-marines.firebaseapp.com",
+    databaseURL: "https://reservation-marines-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "reservation-marines",
+    storageBucket: "reservation-marines.firebasestorage.app",
+    messagingSenderId: "203199063439",
+    appId: "1:203199063439:web:7892e4753b15b29af217fa"
+  };
+  const fbApp = initializeApp(firebaseConfig);
+  const db = getDatabase(fbApp);
+  const reservationsRef = ref(db, 'reservations');
+
+  function showDebugError(label, err){
+    let box = document.getElementById('debug-banner');
+    if(!box){
+      box = document.createElement('div');
+      box.id = 'debug-banner';
+      box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999;background:#3a1414;color:#ffb4b0;font-family:monospace;font-size:11px;padding:10px 14px;white-space:pre-wrap;word-break:break-all;border-bottom:2px solid #e0645f;';
+      document.body.prepend(box);
+    }
+    box.textContent = '⚠ ' + label + ': ' + (err && err.message ? err.message : err);
+  }
+  window.addEventListener('error', (e) => showDebugError('오류', e.error || e.message));
+  window.addEventListener('unhandledrejection', (e) => showDebugError('Promise 오류', e.reason));
+
 (function(){
   "use strict";
 
@@ -289,22 +318,26 @@
   }
 
   // ---------- Storage ----------
-  async function loadReservations(){
-    try{
-      const res = await window.storage.get('reservations', true);
-      if(res && res.value){ reservations = JSON.parse(res.value); }
-    }catch(e){
-      reservations = {};
-    }
-    loaded = true;
-    render();
+  function loadReservations(){
+    onValue(reservationsRef, (snapshot) => {
+      const data = snapshot.val();
+      reservations = data || {};
+      loaded = true;
+      render();
+    }, (err) => {
+      console.error('불러오기 실패', err);
+      showDebugError('DB 읽기 실패', err);
+      loaded = true;
+      render();
+    });
   }
 
   async function saveReservations(){
     try{
-      await window.storage.set('reservations', JSON.stringify(reservations), true);
+      await set(reservationsRef, reservations);
     }catch(e){
       console.error('저장 실패', e);
+      showDebugError('DB 저장 실패', e);
     }
   }
 
@@ -612,3 +645,4 @@
 </script>
 </body>
 </html>
+
